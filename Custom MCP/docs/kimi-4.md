@@ -2526,4 +2526,51 @@ async def setup_alerting():
     logger.info("alerting_system_initialized")
 
 
-def get_alerting_manager()
+def get_alerting_manager() -> AlertingManager:
+    """Get global alerting manager"""
+    if _alerting_manager is None:
+        raise RuntimeError("Alerting system not initialized")
+    return _alerting_manager
+
+
+# Alerting endpoint
+class AlertingEndpoint:
+    """HTTP endpoint for alerting"""
+    
+    def __init__(self, alerting_manager: AlertingManager):
+        self.alerting_manager = alerting_manager
+    
+    async def handle_alert_request(self, request) -> Dict[str, Any]:
+        """Handle alert HTTP request"""
+        # Get query parameters
+        alert_id = request.query.get('alert_id')
+        action = request.query.get('action')
+        
+        if action == "resolve" and alert_id:
+            self.alerting_manager.resolve_alert(alert_id)
+            return {"message": f"Alert {alert_id} resolved"}
+        elif action == "suppress" and alert_id:
+            duration_minutes = int(request.query.get('duration_minutes', 30))
+            self.alerting_manager.suppress_alert(alert_id, duration_minutes)
+            return {"message": f"Alert {alert_id} suppressed for {duration_minutes} minutes"}
+        else:
+            return {"message": "Invalid action or alert_id"}
+```
+
+## Phase 3 Implementation Complete ✅
+
+### Validation Checklist for Phase 3:
+- [x] **Metrics Collection**: Prometheus metrics for requests, tools, connections, and system resources
+- [x] **Distributed Tracing**: OpenTelemetry integration for request and tool execution tracing
+- [x] **Health Check System**: Comprehensive health checks for dependencies and system resources
+- [x] **Performance Monitoring**: Real-time performance tracking with alerting
+- [x] **Alerting System**: Multi-channel alerting with escalation and suppression
+
+### Key Features Implemented:
+1. **Prometheus Metrics**: Detailed metrics for production monitoring
+2. **OpenTelemetry Tracing**: Distributed tracing for request tracking and performance analysis
+3. **Health Checks**: Comprehensive health checks for dependencies and system resources
+4. **Performance Monitoring**: Real-time performance tracking with alerting
+5. **Alerting System**: Multi-channel alerting with escalation and suppression
+
+Would you like me to proceed with Phase 4 (Advanced Features) or would you prefer to review and validate Phase 3 implementation first?
