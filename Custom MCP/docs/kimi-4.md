@@ -2261,4 +2261,269 @@ class AlertingManager:
         self.rules[rule.name] = rule
         logger.info("alert_rule_added", name=rule.name)
     
-    def remove
+    def remove_rule(self, name: str):
+        """Remove alert rule"""
+        if name in self.rules:
+            del self.rules[name]
+            logger.info("alert_rule_removed", name=name)
+    
+    async def trigger_alert(self, rule_name: str, message: str, context: Dict[str, Any]):
+        """Trigger alert based on rule"""
+        if rule_name not in self.rules:
+            logger.warning("alert_rule_not_found", rule_name=rule_name)
+            return
+        
+        rule = self.rules[rule_name]
+        
+        # Check if alert is suppressed
+        alert_id = f"{rule_name}_{context.get('alert_id', '')}"
+        if alert_id in self.active_alerts:
+            alert = self.active_alerts[alert_id]
+            if alert.suppressed_until and alert.suppressed_until > datetime.utcnow():
+                logger.info("alert_suppressed", alert_id=alert_id)
+                return
+        
+        # Create new alert
+        alert = Alert(
+            id=alert_id,
+            rule_name=rule.name,
+            severity=rule.severity,
+            message=message,
+            status=AlertStatus.ACTIVE,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            metadata=context,
+            resolved_at=None,
+            escalated_at=None,
+            suppressed_until=None,
+            notification_count=0,
+            last_notification_at=None
+        )
+        
+        self.active_alerts[alert_id] = alert
+        logger.info("alert_triggered", alert_id=alert_id, rule_name=rule_name)
+        
+        # Send notifications
+        await self.send_alert_notifications(alert, context)
+    
+    async def send_alert_notifications(self, alert: Alert, context: Dict[str, Any]):
+        """Send notifications for alert"""
+        if not self.can_send_global_notification():
+            logger.info("global_rate_limit_skipped", alert_id=alert.id)
+            return
+        
+        rule = self.rules.get(alert.rule_name)
+        if not rule:
+            logger.error("alert_rule_missing", alert_id=alert.id)
+            return
+        
+        channels = [self.channels.get(channel) for channel in rule.channels]
+        channels = [channel for channel in channels if channel and channel.enabled]
+        
+        if not channels:
+            logger.warning("no_channels_for_alert", alert_id=alert.id)
+            return
+        
+        tasks = [channel.send_notification(alert, context) for channel in channels]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        for channel, result in zip(channels, results):
+            if isinstance(result, bool) and result:
+                alert.notification_count += 1
+                alert.last_notification_at = datetime.utcnow()
+                logger.info("notification_sent", alert_id=alert.id, channel=channel.name)
+            else:
+                logger.error("notification_failed", alert_id=alert.id, channel=channel.name, error=str(result))
+        
+        # Update alert status
+        alert.updated_at = datetime.utcnow()
+        self.active_alerts[alert.id] = alert
+    
+    def can_send_global_notification(self) -> bool:
+        """Check global rate limit for notifications"""
+        if self._last_global_notification is None:
+            return True
+        
+        time_since_last = datetime.utcnow() - self._last_global_notification
+        return time_since_last.total_seconds() >= (self.global_rate_limit_minutes * 60)
+    
+    def record_global_notification(self):
+        """Record global notification"""
+        self._last_global_notification = datetime.utcnow()
+    
+    async def _escalation_loop(self):
+        """Periodic escalation of unresolved alerts"""
+        while True:
+            try:
+                await asyncio.sleep(300)  # Check every 5 minutes
+                
+                now = datetime.utcnow()
+                for alert in list(self.active_alerts.values()):
+                    rule = self.rules.get(alert.rule_name)
+                    if not rule:
+                        continue
+                    
+                    if alert.status == AlertStatus.RESOLVED:
+                        continue
+                    
+                    if alert.escalated_at and (now - alert.escalated_at).total_seconds() >= (rule.escalation_minutes * 60):
+                        alert.status = AlertStatus.ESCALATED
+                        alert.escalated_at = now
+                        logger.info("alert_escalated", alert_id=alert.id)
+                        
+                        # Re-send notifications
+                        await self.send_alert_notifications(alert, alert.metadata)
+                        
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.exception("escalation_loop_error", error=str(e))
+    
+    async def _cleanup_loop(self):
+        """Periodic cleanup of old alerts"""
+        while True:
+            try:
+                await asyncio.sleep(3600)  # Cleanup every hour
+                
+                now = datetime.utcnow()
+                cutoff = now - timedelta(days=30)  # Keep alerts for 30 days
+                
+                # Remove old alerts from history
+                self.alert_history = [alert for alert in self.alert_history if alert.created_at >= cutoff]
+                
+                # Remove resolved alerts from active list
+                for alert_id, alert in list(self.active_alerts.items()):
+                    if alert.status == AlertStatus.RESOLVED and alert.resolved_at and alert.resolved_at < cutoff:
+                        del self.active_alerts[alert_id]
+                        logger.info("resolved_alert_removed", alert_id=alert_id)
+                        
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.exception("cleanup_loop_error", error=str(e))
+    
+    def get_active_alerts(self) -> List[Alert]:
+        """Get active alerts"""
+        return list(self.active_alerts.values())
+    
+    def get_alert_history(self, limit: int = 1000) -> List[Alert]:
+        """Get alert history"""
+        return self.alert_history[-limit:]
+    
+    def resolve_alert(self, alert_id: str):
+        """Resolve alert"""
+        if alert_id in self.active_alerts:
+            alert = self.active_alerts[alert_id]
+            alert.status = AlertStatus.RESOLVED
+            alert.resolved_at = datetime.utcnow()
+            logger.info("alert_resolved", alert_id=alert_id)
+            self.alert_history.append(alert)
+            del self.active_alerts[alert_id]
+    
+    def suppress_alert(self, alert_id: str, duration_minutes: int):
+        """Suppress alert for specified duration"""
+        if alert_id in self.active_alerts:
+            alert = self.active_alerts[alert_id]
+            alert.suppressed_until = datetime.utcnow() + timedelta(minutes=duration_minutes)
+            logger.info("alert_suppressed", alert_id=alert_id, duration_minutes=duration_minutes)
+
+
+# Predefined alert rules
+def create_standard_alert_rules() -> List[AlertRule]:
+    """Create standard alert rules"""
+    return [
+        AlertRule(
+            name="high_error_rate",
+            condition="error_rate > 0.05",
+            severity=AlertSeverity.CRITICAL,
+            message_template="Error rate exceeded 5%",
+            channels=["email", "slack"],
+            cooldown_minutes=30,
+            escalation_minutes=60,
+            auto_resolve=True,
+            enabled=True
+        ),
+        AlertRule(
+            name="high_response_time",
+            condition="p95_response_time > 1.0",
+            severity=AlertSeverity.WARNING,
+            message_template="P95 response time exceeded 1 second",
+            channels=["email"],
+            cooldown_minutes=60,
+            escalation_minutes=120,
+            auto_resolve=True,
+            enabled=True
+        ),
+        AlertRule(
+            name="cpu_usage_high",
+            condition="cpu_usage > 80.0",
+            severity=AlertSeverity.WARNING,
+            message_template="CPU usage exceeded 80%",
+            channels=["email", "webhook"],
+            cooldown_minutes=15,
+            escalation_minutes=30,
+            auto_resolve=True,
+            enabled=True
+        ),
+        AlertRule(
+            name="memory_usage_high",
+            condition="memory_usage > 85.0",
+            severity=AlertSeverity.WARNING,
+            message_template="Memory usage exceeded 85%",
+            channels=["email", "webhook"],
+            cooldown_minutes=15,
+            escalation_minutes=30,
+            auto_resolve=True,
+            enabled=True
+        )
+    ]
+
+
+# Global alerting manager
+_alerting_manager: Optional[AlertingManager] = None
+
+
+async def setup_alerting():
+    """Setup global alerting system"""
+    global _alerting_manager
+    
+    _alerting_manager = AlertingManager()
+    
+    # Register channels
+    email_channel = EmailNotificationChannel("email", {
+        "enabled": True,
+        "smtp": {
+            "host": "smtp.example.com",
+            "port": 587,
+            "username": "alert@example.com",
+            "password": "password",
+            "use_tls": True
+        },
+        "from_address": "alerts@mcp-server.local",
+        "to_addresses": ["admin@example.com"]
+    })
+    _alerting_manager.register_channel(email_channel)
+    
+    slack_channel = SlackNotificationChannel("slack", {
+        "enabled": True,
+        "webhook_url": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+    })
+    _alerting_manager.register_channel(slack_channel)
+    
+    webhook_channel = WebhookNotificationChannel("webhook", {
+        "enabled": True,
+        "url": "https://example.com/alerts",
+        "method": "POST",
+        "headers": {"Content-Type": "application/json"},
+        "timeout": 30
+    })
+    _alerting_manager.register_channel(webhook_channel)
+    
+    # Add standard rules
+    for rule in create_standard_alert_rules():
+        _alerting_manager.add_rule(rule)
+    
+    logger.info("alerting_system_initialized")
+
+
+def get_alerting_manager()
