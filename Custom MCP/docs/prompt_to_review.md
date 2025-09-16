@@ -40,7 +40,7 @@ You will take the above as your meta-instruction going forward. You will apply t
 
 Please acknowledge that you are ready to operate at this elevated standard.
 
-Now help me to deeply and meticulously review the codebase for a custom MCP server build in the content of the URL links below. Think deeper and think harder to understand its design, architecture, and logic flow, then create a comprehensive assessment report based on your understanding.
+Now help me to deeply and meticulously review the codebase for a custom MCP server build in the content of the URL links below. Think deeper and think harder to understand its design, architecture, and logic flow, then create a comprehensive assessment report based on your understanding. Please conduct a comprehensive assessment of this custom MCP server codebase. Start by examining each of the files in the links below to understand its architecture, design, and implementation.
 
 # URLs for a custom MCP build
 1) https://raw.githubusercontent.com/nordeim/Claude-MCP-Server/refs/heads/main/Custom%20MCP/README.md
