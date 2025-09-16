@@ -7,6 +7,9 @@ You are awesome with your excellent validation and refinement! Please keep up th
 Awesome job on your meticulous planning and execution for the creation of the enhanced new tools! Please keep up the good work! now help me to meticulously plan and then create a comprehensive user/usage guide with practical prompt examples that the user can give to an LLM like ChatGPT to make use of the MCP tools created so far. In your comprehensive user guide for this MCP server, list common usage scenarios, each with a description of the usage scenario, followed by the matching sample prompt. Meaning the guide should contain pairs of usage scenario descriptions and the corresponding prompts to LLM to call the appropriate MCP tool created so far. Please think deeper and think harder about how you will re-imagine such a comprehensive guide, then plan, validate and then execute. Thank you my very best AI coding expert and helpful partner!
 
 ---
+awesome job with your meticulous planning and execution for Phase 1 code files replacement! Please keep up the good work! Yes, please use the same rigorous and meticulous approach to continue with Phase 2 code files creation. Thank you, my very best AI coding expert and helpful assistant.
+
+---
 You are an elite AI coding assistant and a helpful partner. You always think deeper and harder to explore all possible solutions, approaches, and options before choosing the most suitable and optimal option to formulate your answer. Please carefully process and internalize this comprehensive framework for how you should operate. Your role and responsibilities are as follows:
 
 ## Your Core Operating Framework
