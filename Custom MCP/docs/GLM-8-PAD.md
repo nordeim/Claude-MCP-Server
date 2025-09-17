@@ -7732,4 +7732,42 @@ class ConfigManager:
             self.logging.level = str(logging_config.get('level', self.logging.level)).upper()
             self.logging.file_path = logging_config.get('file_path') if logging_config.get('file_path') else None
             self.logging.max_file_size = max(1, int(logging_config.get('max_file_size', self.logging.max_file_size)))
+            self.security.max_output_size = max(1, int(sec_config.get('max_output_size', self.security.max_output_size)))
+            self.security.timeout_seconds = max(1, int(sec_config.get('timeout_seconds', self.security.timeout_seconds)))
+            self.security.concurrency_limit = max(1, int(sec_config.get('concurrency_limit', self.security.concurrency_limit)))
+            self.security.enable_input_validation = bool(sec_config.get('enable_input_validation', self.security.enable_input_validation))
+            self.security.enable_command_sanitization = bool(sec_config.get('enable_command_sanitization', self.security.enable_command_sanitization))
+            self.security.enable_resource_limits = bool(sec_config.get('enable_resource_limits', self.security.enable_resource_limits))
+            self.security.enable_audit_logging = bool(sec_config.get('enable_audit_logging', self.security.enable_audit_logging))
+        
+        # Circuit breaker configuration
+        if 'circuit_breaker' in config_data:
+            cb_config = config_data['circuit_breaker']
+            self.circuit_breaker.failure_threshold = max(1, int(cb_config.get('failure_threshold', self.circuit_breaker.failure_threshold)))
+            self.circuit_breaker.recovery_timeout = max(1.0, float(cb_config.get('recovery_timeout', self.circuit_breaker.recovery_timeout)))
+            self.circuit_breaker.half_open_success_threshold = max(1, int(cb_config.get('half_open_success_threshold', self.circuit_breaker.half_open_success_threshold)))
+        
+        # Health configuration
+        if 'health' in config_data:
+            health_config = config_data['health']
+            self.health.check_interval = max(5.0, float(health_config.get('check_interval', self.health.check_interval)))
+            self.health.cpu_threshold = max(0.0, min(100.0, float(health_config.get('cpu_threshold', self.health.cpu_threshold))))
+            self.health.memory_threshold = max(0.0, min(100.0, float(health_config.get('memory_threshold', self.health.memory_threshold))))
+            self.health.disk_threshold = max(0.0, min(100.0, float(health_config.get('disk_threshold', self.health.disk_threshold))))
+            self.health.timeout = max(1.0, float(health_config.get('timeout', self.health.timeout)))
+        
+        # Metrics configuration
+        if 'metrics' in config_data:
+            metrics_config = config_data['metrics']
+            self.metrics.enabled = bool(metrics_config.get('enabled', self.metrics.enabled))
+            self.metrics.prometheus_enabled = bool(metrics_config.get('prometheus_enabled', self.metrics.prometheus_enabled))
+            self.metrics.prometheus_port = max(1, min(65535, int(metrics_config.get('prometheus_port', self.metrics.prometheus_port))))
+            self.metrics.collection_interval = max(1.0, float(metrics_config.get('collection_interval', self.metrics.collection_interval)))
+        
+        # Logging configuration
+        if 'logging' in config_data:
+            logging_config = config_data['logging']
+            self.logging.level = str(logging_config.get('level', self.logging.level)).upper()
+            self.logging.file_path = logging_config.get('file_path') if logging_config.get('file_path') else None
+            self.logging.max_file_size = max(1, int(logging_config.get('max_file_size', self.logging.max_file_size)))
             self
