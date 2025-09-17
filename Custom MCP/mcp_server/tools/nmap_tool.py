@@ -3,7 +3,7 @@
 Enhanced Nmap tool with circuit breaker, metrics, and advanced features.
 """
 import logging
-from typing import Sequence
+from typing import Sequence, Optional
 
 from mcp_server.base_tool import MCPBaseTool, ToolInput, ToolOutput, ToolErrorType, ErrorContext
 from mcp_server.config import get_config
