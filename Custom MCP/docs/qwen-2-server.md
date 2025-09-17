@@ -544,3 +544,5 @@ if __name__ == "__main__":
 *   **Handler Logic Simplified**: The `hasattr` check in `enhanced_handler` was simplified to `if hasattr(tool, 'run')`, as discussed previously.
 
 This file is ready to be deployed as a drop-in replacement. It resolves the core architectural flaw while maintaining the system's robustness and feature set.
+
+https://chat.qwen.ai/s/356e0209-5a82-4560-93d2-d9bf30e0694c?fev=0.0.209
