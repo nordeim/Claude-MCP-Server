@@ -561,3 +561,6 @@ TOOL_EXCLUDE=DeprecatedTool
 5. **Add multi-region support**
 
 This architecture document provides a comprehensive foundation for extending the MCP server while maintaining security, performance, and reliability standards.
+
+---
+https://www.kimi.com/share/d356qjnhq49sc1rqlsc0
