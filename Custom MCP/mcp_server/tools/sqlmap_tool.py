@@ -360,7 +360,7 @@ class SqlmapTool(MCPBaseTool):
         from datetime import datetime
         return datetime.now()
     
-    async def get_tool_info(self) -> dict:
+    def get_tool_info(self) -> dict:
         """Get enhanced sqlmap tool information (ENHANCED FEATURE)."""
         base_info = {
             "name": self.tool_name,
